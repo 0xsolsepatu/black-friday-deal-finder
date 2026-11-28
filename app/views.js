@@ -26,24 +26,34 @@ function checkLine(d) {
   return `Checked ${day} UTC`;
 }
 
+function endsShort(d) {
+  return new Date(`${d.ends}T00:00:00Z`).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function verdictBadge(d) {
   return `<span class="verdict verdict-${escape(d.verdict)}">${escape(VERDICT_LABEL[d.verdict])}</span>`;
 }
 
-export function dealCard(d, groupSize) {
+export function dealCard(d, groupSize, rank) {
   const off = percentOff(d);
   const compare =
     groupSize > 1
       ? `<a class="compare-link" href="#/compare/${encodeURIComponent(d.group)}">Compare ${groupSize} stores &darr;</a>`
       : "";
+  const rankTag = rank ? `<span class="rank">#${rank}</span>` : "";
   return `<article class="card">
-  <div class="card-top"><span class="store">${escape(d.store)}</span><span class="cat">${escape(d.category)}</span></div>
+  <div class="card-top">${rankTag}<span class="store">${escape(d.store)}</span><span class="cat">${escape(d.category)}</span></div>
   <h3><a href="#/deal/${encodeURIComponent(d.id)}">${escape(d.title)}</a></h3>
   <p class="price-row"><span class="price">${usd(d.price)}</span> <s class="was">${usd(d.was)}</s> <span class="off">${off}% off</span></p>
   <p class="save">You save ${money(savings(d))}</p>
   <p>${verdictBadge(d)}</p>
   <p class="note">${escape(d.verdictNote)}</p>
-  <p class="meta">${escape(checkLine(d))} &middot; ends ${escape(d.ends)}</p>
+  <p class="meta">${escape(checkLine(d))} &middot; ends ${escape(endsShort(d))}</p>
+  <p class="source">Read in: ${escape(d.source)}</p>
   <p class="card-links"><a class="shop" href="${escape(d.url)}" target="_blank" rel="noopener">See it at ${escape(d.store)} &rarr;</a>${compare}</p>
 </article>`;
 }
@@ -51,9 +61,9 @@ export function dealCard(d, groupSize) {
 export function statsBar(stats) {
   return `<section class="stats" aria-label="Board summary">
   <div><strong>${stats.total}</strong><span>verified deals</span></div>
-  <div><strong>${stats.newLows}</strong><span>new all-time lows</span></div>
+  <div><strong>${stats.newLows}</strong><span>new lows</span></div>
   <div><strong>${stats.avgOff}%</strong><span>average discount</span></div>
-  <div><strong>${money(stats.totalSaved)}</strong><span>total savings vs list</span></div>
+  <div><strong>${money(stats.totalSaved)}</strong><span>total savings</span></div>
 </section>`;
 }
 
@@ -92,6 +102,22 @@ export function filterBar(categories, stores, state) {
   ]
     .map(([v, label]) => `<option value="${v}"${state.sort === v ? " selected" : ""}>${escape(label)}</option>`)
     .join("");
+  // A one-line summary of what is applied, so a filtered view proves it
+  // in words as well as in the controls: each active filter is a chip.
+  const active = [];
+  if (state.query) active.push(`Search: “${state.query}”`);
+  if (state.category !== "All") active.push(`Category: ${state.category}`);
+  if (state.store !== "All") active.push(`Store: ${state.store}`);
+  if (state.verdict !== "All") active.push(`Verdict: ${VERDICT_LABEL[state.verdict]}`);
+  if (state.minDiscount > 0) active.push(`${state.minDiscount}% off or more`);
+  if (state.sort !== "best")
+    active.push(
+      `Sorted: ${{ discount: "Biggest discount", savings: "Biggest saving", "price-low": "Lowest price" }[state.sort]}`,
+    );
+  const activeHtml =
+    active.length > 0
+      ? `<p class="active-filters">Filters on: ${active.map((a) => `<span>${escape(a)}</span>`).join("")}</p>`
+      : "";
   return `<section class="filters" aria-label="Search and filters">
   <label class="search-label">Search deals
     <input id="search" type="search" placeholder="Try &ldquo;AirPods&rdquo;, &ldquo;LEGO&rdquo;, &ldquo;OLED&rdquo;&hellip;" value="${escape(state.query)}">
@@ -103,6 +129,7 @@ export function filterBar(categories, stores, state) {
     <label>Verdict <select id="verdict">${verdictOpts}</select></label>
     <label>Sort <select id="sort">${sortOpts}</select></label>
   </div>
+  ${activeHtml}
 </section>`;
 }
 
@@ -152,7 +179,7 @@ ${groupRows
     <dt>Category</dt><dd>${escape(d.category)}</dd>
     <dt>Price checked</dt><dd>${escape(checkLine(d))}</dd>
     <dt>Read in</dt><dd>${escape(d.source)}</dd>
-    <dt>Sale ends</dt><dd>${escape(d.ends)}</dd>
+    <dt>Sale ends</dt><dd>${escape(endsShort(d))}</dd>
     <dt>Code needed</dt><dd>No code — the price is live at the store.</dd>
   </dl>
   <p><a class="shop big-shop" href="${escape(d.url)}" target="_blank" rel="noopener">See it at ${escape(d.store)} &rarr;</a></p>

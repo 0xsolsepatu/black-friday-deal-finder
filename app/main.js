@@ -63,16 +63,27 @@ function groupSizes() {
   return sizes;
 }
 
+const SORT_LABEL = {
+  best: "Best first — new lows at the top",
+  discount: "Biggest discount first",
+  savings: "Biggest saving first",
+  "price-low": "Lowest price first",
+};
+
+function countLineFor(shown) {
+  return `Showing ${shown.length} of ${deals.length} deals · Sorted: ${SORT_LABEL[state.sort]}`;
+}
+
 function renderBoard() {
   const stats = boardStats(deals);
   const filtered = filterDeals(deals, state);
   const shown = sortDeals(filtered, state.sort);
   const sizes = groupSizes();
-  const countLine = `Showing ${shown.length} of ${deals.length} deals`;
+  const countLine = countLineFor(shown);
   const cardsHtml =
     shown.length === 0
       ? `<p class="empty">No deal matches those filters. Try clearing the search or lowering the discount.</p>`
-      : shown.map((d) => dealCard(d, sizes[d.group] || 0)).join("");
+      : shown.map((d, i) => dealCard(d, sizes[d.group] || 0, i + 1)).join("");
   app.innerHTML = listPage({
     stats,
     filterHtml: filterBar(CATEGORIES, STORES, state),
@@ -110,11 +121,11 @@ function refreshGrid() {
   const shown = sortDeals(filtered, state.sort);
   const sizes = groupSizes();
   shareLink();
-  document.getElementById("count").textContent = `Showing ${shown.length} of ${deals.length} deals`;
+  document.getElementById("count").textContent = countLineFor(shown);
   document.getElementById("grid").innerHTML =
     shown.length === 0
       ? `<p class="empty">No deal matches those filters. Try clearing the search or lowering the discount.</p>`
-      : shown.map((d) => dealCard(d, sizes[d.group] || 0)).join("");
+      : shown.map((d, i) => dealCard(d, sizes[d.group] || 0, i + 1)).join("");
 }
 
 function render() {
